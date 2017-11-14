@@ -2,6 +2,8 @@ package ju.es.demo01;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.transport.TransportClient;
@@ -128,18 +130,56 @@ public class TestES {
     }
 
     /**
-     * 更新文档
+     * 更新文档（直接修改）
      * @throws IOException
      * @throws ExecutionException
      * @throws InterruptedException
      */
     @Test
-    public void updateDoc() throws IOException, ExecutionException, InterruptedException {
+    public void updateDoc_1() throws IOException, ExecutionException, InterruptedException {
         UpdateRequest updateRequest = new UpdateRequest();
         updateRequest.index("wang");
         updateRequest.type("jufeng");
         updateRequest.id("1");
         updateRequest.doc(XContentFactory.jsonBuilder().startObject().field("type","title").endObject());
         client.update(updateRequest).get();
+    }
+
+    /**
+     * 修改文档，如果不存在则插入存在在修改。
+     * @throws IOException
+     * @throws ExecutionException
+     * @throws InterruptedException
+     */
+    @Test
+    public void updateDoc_2() throws IOException, ExecutionException, InterruptedException {
+        IndexRequest indexRequest = new IndexRequest("wang", "jufeng", "3")
+                .source(XContentFactory.jsonBuilder()
+                        .startObject()
+                            .field("type","syslog")
+                            .field("eventCount",2)
+                            .field("eventDate",new Date())
+                            .field("message","wangjufeng test es for 2017")
+                        .endObject()
+                );
+        UpdateRequest updateRequest = new UpdateRequest("wang", "jufeng", "3")
+                .doc(XContentFactory.jsonBuilder()
+                        .startObject()
+                        .field("type", "title")
+                        .endObject()
+                ).upsert(indexRequest);
+        client.update(updateRequest).get();
+    }
+
+    /**
+     * 删除文档
+     *
+     */
+    @Test
+    public void deleteDoc(){
+        DeleteResponse deleteResponse = client.prepareDelete("wang", "jufeng", "2").get();
+        //获取删除结果 200 删除成功，404 未找到该文档。
+        int status = deleteResponse.status().getStatus();
+        System.out.println(status);
     }
 }
